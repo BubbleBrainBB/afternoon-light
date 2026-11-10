@@ -1,77 +1,84 @@
-# 午后 · Afternoon Light
+# Afternoon Light · 午后
+
+English | [中文](README.zh-CN.md)
 
 [![Afternoon Light](preview.jpg)](afternoon_light.png)
 
-一幅完全由代码生成的静态画作：深秋午后，斜阳穿过法式落地门，把窗棂和院中树叶的影子投在白墙与人字拼木地板上。
+A still image computed entirely by code: a quiet room on a late-autumn afternoon, with low sun coming through a French door and laying window-grid light and leaf shadows across a white wall and a herringbone floor.
 
-- 成品：[`afternoon_light.png`](afternoon_light.png)（3840 × 2560，8-bit sRGB）
-- 预览：[`preview.jpg`](preview.jpg)（1920 × 1280）
+- Final image: [`afternoon_light.png`](afternoon_light.png) (3840 × 2560, 8-bit sRGB)
+- Preview: [`preview.jpg`](preview.jpg) (1920 × 1280)
 
-> **In English.** A still image computed entirely by code: a quiet room on a late-autumn afternoon, low sun through a French door, window-grid light and leaf shadows on a white wall. No image-generation model, no photos, no texture images, no 3D software, no render engine. The picture comes from a small path tracer written from scratch in C++ (`src/`), a fully procedural scene (about 370,000 triangles), and a Python "darkroom" script for denoising and tone. The code was written by Claude, an AI model; the image was computed by that code. `./render.sh` rebuilds it (400 samples per pixel, about an hour on a 16-core laptop). The rest of this README is in Chinese.
+No image-generation model, no photos, no texture images, no pre-made 3D models, and no off-the-shelf 3D software or render engine were used. The renderer is itself a small piece of 3D software, written from scratch for this one picture. The code was written by Claude, an AI model (`claude-fable-5-2`); the image was computed by that code.
 
-## 画的是什么
+## What the picture shows
 
-一间安静的空房间的一角，镜头平视后墙（一点透视，竖线保持垂直）。
+One corner of a quiet, empty room. The camera faces the back wall head-on (one-point perspective, verticals kept vertical).
 
-- **光**：太阳高度角 24°，从左侧的落地门斜射进来，在后墙上投下一片倾斜的窗格光斑，并沿着地板拉出一条暖色的光带。门外（画面外）有一棵树，它的叶影叠在窗格影子上——离墙远的树叶影子发虚，离墙近的窗棂影子锐利，两种软硬不同的影子交错在一起。
-- **纱帘**：门靠墙角的一侧挂着一幅薄纱，被太阳直射的部分透亮，窗棂的影子落在纱上；穿过纱的阳光变成墙上第一列柔和的条纹。
-- **静物**：三脚小圆几上是一只蘸釉陶瓶，插着柿子枝；旁边一把紫砂小壶、一只白瓷茶杯。右边一把梯背木椅，椅面上搁着一顶草帽；墙根有三本摞着的书，墙上一幅小画。
-- **门外**：一棵秋天的槭树、落在石板露台上的叶子、绿篱、远处的树线和淡蓝的天。
-- **空气**：光柱里有很淡的体积光和零星的浮尘。
-- **冷暖**：阳光是暖的；画面外右墙上还有一扇只进天光的窗，给阴影补了一层偏冷的光。
+- **Light.** The sun is 24° above the horizon and comes in through the French door on the left. It throws a slanted window grid onto the back wall and a warm strip across the floor. A tree outside the frame adds leaf shadows on top of the grid. Leaves far from the wall cast soft shadows; the window bars close to the wall cast sharp ones.
+- **Sheer curtain.** A thin curtain hangs by the corner. Where the sun hits it, it glows, and the shadows of the window bars fall on it. Sunlight that passes through it becomes the first, softer column of stripes on the wall.
+- **Still life.** A three-legged side table holds a dipped-glaze vase with a persimmon branch, a small Yixing clay teapot and a white porcelain cup. To the right is a ladder-back chair with a straw hat on the seat. Three stacked books sit by the wall, and a small print hangs above.
+- **Outside.** An autumn maple, fallen leaves on a stone terrace, a hedge, a distant tree line and a pale blue sky.
+- **Air.** Faint light shafts and a few dust motes in the beam.
+- **Warm and cool.** The sunlight is warm. A second window in the right wall, outside the frame, lets in only skylight and fills the shadows with cooler light.
 
-## 技术
+## How it was made
 
-没有用任何渲染引擎、三维软件、贴图、模型或 AI 生图；几何、材质、光照、后期全部是这个目录里的代码。
+Geometry, materials and lighting are all computed by the code in this directory. The post-processing script uses three general-purpose libraries: numpy, scipy and Pillow.
 
-**渲染器（C++17，单文件编译，`src/`）**
+**Renderer (C++17, a single translation unit, `src/`)**
 
-- `core.h`：向量数学、PCG 随机数、CMJ 相关多重抖动采样、Perlin/fBm 噪声。
-- `geom.h`：三角网格、程序化建模工具（圆角盒、放样管、车削回转体、Catmull-Rom 细分）、SAH 分箱 BVH。
-- `scene.h`：整个场景的程序化建模（约 37 万个三角形）与全部程序化材质——人字拼地板（逐块木纹、色差、缝隙、微小倾斜）、抹灰墙、蘸釉陶、紫砂、草编、薄纱（开孔率随入射角变化的随机透明）、半透明树叶等。
-- `main.cpp`：单向路径追踪。
-  - 太阳是有角直径的面光源（半径 0.30°），所以半影宽度随遮挡物距离自然变化；对太阳做下一事件估计并与 BSDF 采样做 MIS。
-  - 天光通过两个“门户”（落地门、补光窗）做引导采样。
-  - 墙和地板上那块光斑反弹出的光，另外从光源一侧采样：在门洞上取点、沿阳光方向找到被照亮的点，作为虚拟点光源与每个路径顶点连接，再和正向路径做 MIS。实测这部分只占间接光的 7–9%，这个方法只把误差降低了 3–9%；真正压住噪点的是下面的粗糙度正则化和后期降噪。
-  - GGX 微表面 + 漫反射的涂层材质、薄片半透明材质、漫反射后的粗糙度正则化（抑制光泽焦散的萤火虫噪点）。
-  - 薄透镜景深（很小）、帐形像素滤波、主光线上的单次散射体积光、浮尘粒子的可见性计算。
-  - 输出线性浮点 AOV：beauty、太阳直射、反照率、法线、深度、体积光、浮尘列表。
+- `core.h`: vector math, PCG random numbers, correlated multi-jittered (CMJ) sampling, Perlin/fBm noise.
+- `geom.h`: triangle mesh, procedural modelling tools (rounded box, swept tube, lathe, Catmull-Rom refinement), binned-SAH BVH.
+- `scene.h`: the whole scene, modelled in code (368,156 triangles), and every material as a procedural function: herringbone floor (per-plank grain, tone variation, gaps, slight tilt), plaster wall, dipped glaze, clay, woven straw, sheer fabric (stochastic transparency whose openness depends on the angle of incidence), translucent leaves.
+- `main.cpp`: a unidirectional path tracer.
+  - The sun is an area light with an angular radius of 0.30° (the real sun is about 0.27°), so penumbra width follows from the distance to the occluder. It is sampled with next-event estimation and combined with BSDF sampling by multiple importance sampling (MIS).
+  - Skylight is importance-sampled through two portals: the French door and the fill window.
+  - Light bounced off the sunlit patch on the wall and floor is additionally sampled from the light side: a point is picked on the door opening, followed along the sun direction to the surface it lights, and connected to every path vertex as a virtual point light, with MIS against ordinary path tracing. Measured on this scene, that light is only 7–9% of the indirect illumination and the technique reduces error by only 3–9%. What actually keeps the noise down is the roughness regularisation below and the denoiser.
+  - Coated diffuse materials with a GGX microfacet layer, thin translucent materials, and roughness regularisation after diffuse bounces (which suppresses fireflies from glossy caustics).
+  - Thin-lens depth of field (very slight), tent pixel filter, single-scattering light shafts along primary rays, and visibility tests for dust motes.
+  - Output: linear floating-point buffers for beauty, direct sun, albedo, normal, depth, light shafts, and a list of dust motes.
 
-**暗房（Python / numpy / scipy / Pillow，`src/develop.py`）**
+**Darkroom (Python with numpy, scipy and Pillow, `src/develop.py`)**
 
-- 只对“间接光”降噪：先除以反照率，再用法线/深度/反照率引导的 à-trous 小波滤波，太阳直射层（锐利的影子）不动。
-- 体积光降噪后叠加、浮尘溅射、微弱的辉光。
-- 胶片式色调映射、轻微的冷暖分离调色、暗角、细颗粒与抖动，输出 8-bit sRGB。
+- Only the indirect light is denoised. It is divided by albedo, then filtered with an à-trous wavelet filter guided by normal, depth and albedo. The direct-sun layer, which holds the sharp shadows, is left untouched.
+- Denoised light shafts, splatted dust motes and a faint bloom are added.
+- Filmic tone curve, a slight warm/cool split grade, vignette, fine grain and dither, then 8-bit sRGB output.
 
-## 怎么重新渲染
+## Rendering it yourself
 
-需要：一个 C++17 编译器（`c++`/clang/gcc）、Python 3 以及 `numpy`、`scipy`、`Pillow`。
+You need a C++17 compiler (`c++`, clang or gcc) and Python 3 with `numpy`, `scipy` and `Pillow`.
 
 ```sh
-./render.sh              # 成品：3840×2560，400 spp
-./render.sh 64 1920      # 快速小样：64 spp，1920×1280，几分钟
+./render.sh              # final: 3840×2560, 400 samples per pixel
+./render.sh 64 1920      # quick look: 64 spp at 1920×1280, a few minutes
 ```
 
-脚本会编译 `src/main.cpp`，把中间缓冲写到 `work/`，再调用 `src/develop.py` 生成 `afternoon_light.png` 和 `preview.jpg`。渲染是确定性的（固定种子），同一台机器上重跑结果一致。
-成品这一版在一台同时跑着别的任务的 16 核 Apple M4 Max 上渲染用时 3041 秒（约 51 分钟），后期约 1.5 分钟；机器空闲时会更快。`work/` 里的中间缓冲约 900 MB，出图后可以删掉（交付时已删）。
+The script compiles `src/main.cpp`, writes intermediate buffers to `work/`, then runs `src/develop.py` to produce `afternoon_light.png` and `preview.jpg`.
 
-可调的环境变量：`SUN_AZ`、`SUN_EL`（太阳方位/高度角，默认 30/24）、`TREE_SEED`、`TREE_Y`、`TREE_Z`、`TREE_R`（院中那棵投影的树）、`NT`（线程数）。
+- **Determinism.** Seeds are fixed. Two runs of the renderer with the same arguments on the same machine produced byte-identical buffers.
+- **Time.** The published image took 3041 seconds (about 51 minutes) to render on a 16-core Apple M4 Max MacBook Pro that was busy with other jobs, plus about 1.5 minutes of post-processing.
+- **Disk.** The intermediate buffers in `work/` take about 900 MB and can be deleted afterwards.
+- **Not verified.** `render.sh` was run end to end only at a small size (16 spp, 480 px wide). The full-size image was produced by running its two commands separately.
 
-## 素材来源
+Environment variables: `SUN_AZ` and `SUN_EL` (sun azimuth and elevation, default 30 and 24), `TREE_SEED`, `TREE_Y`, `TREE_Z`, `TREE_R` (the tree that casts the dappled shade), and `NT` (thread count).
 
-无。没有使用任何第三方贴图、模型、照片或字体；画面里的一切（包括墙上那幅小画）都是程序生成的。
-用到的公开算法：Kensler 的 CMJ 采样、Heitz 的 GGX 可见法线分布采样、Duff 等的正交基构造、PCG 随机数、Perlin 噪声、Dammertz 等的 à-trous 降噪思路。
+## Assets and credits
 
-## 已知不足（自评）
+No third-party assets: no textures, models, photos or fonts. Everything in the picture, including the small print on the wall, is generated by the program.
 
-成品的上半幅和下半幅的主要区域（门与门外、纱帘、静物、椅子与草帽、书、挂画、大面积阴影墙面、部分地板）在 100% 像素下看过，地板前景没有完全覆盖；没有发现色带、接缝、漏光、悬空物体或过曝死黑（统计上没有任何像素被裁切到纯白或纯黑）。自动检查在右侧暗墙上找到约 30 个孤立的单像素亮点，应是残留噪点，正常观看看不出来。离“极致”还有这些差距：
+Several small routines follow published algorithms and their reference code closely: Kensler's CMJ sampling, Heitz's sampling of the GGX distribution of visible normals, the orthonormal basis of Duff et al., the PCG random number generator, and Perlin noise. The denoiser follows the à-trous approach of Dammertz et al.
 
-- **门上没有玻璃**。窗格是空的，所以没有玻璃的反光和轻微的色偏，懂行的人能看出来。
-- **门外的远景是贴了程序纹理的平面**。槭树、落叶是真实几何，但绿篱和远处树线只是带凹凸的平板，放大看比较“平”。
-- **纱帘是公式生成的褶皱，不是布料模拟**。褶子偏规整，下摆是一条直线，没有真实布料的垂坠和不规则。
-- **阴影里的墙面被降噪抹得偏平滑**。成品是 400 spp 加降噪，不是硬算到收敛；抹灰的细微起伏主要在受光处可见，暗部质感偏“干净”。
-- **体积光和浮尘很克制**。光柱只在门与墙之间隐约可见，浮尘只有零星几颗，缩略图里基本看不出来；这是为了不被误认成噪点而做的取舍。
-- **没有焦散**。为了压掉萤火虫噪点，漫反射之后的光泽反射被加粗糙了，所以地板把阳光反到墙上的那种亮斑、茶汤和瓷杯的高光焦散都没有。
-- **部分物件建模偏简**。柿子的萼片和枯叶、草帽的编织纹、书（没有书名和细节）、椅子的木纹都经不起特写；地板个别木条的纹理在 100% 下略显规则。
-- **构图偏空**。右上大片墙面是有意的留白，但也可以说画面内容偏少、叙事性不强。
-- **物理上的简化**：天空是手写的渐变而非大气散射模型；树叶和纱只做了薄片漫透射；镜头没有色差、眩光等真实光学瑕疵。
+## Known shortcomings
+
+The upper half of the image and the main areas of the lower half (door and garden, curtain, still life, chair and hat, books, the print, the large shadowed wall, part of the floor) were inspected at 100% pixel size. The floor in the foreground was not fully covered. No banding, seams, light leaks or floating objects were found, and no pixel is clipped to pure white or pure black. An automated check found about 30 isolated single-pixel bright specks on the dark wall at the right. They are most likely residual noise and are not visible at normal viewing size.
+
+- **No glass in the door.** The panes are empty, so there are no reflections and no slight tint.
+- **The far background is flat.** The maple and the fallen leaves are real geometry, but the hedge and the distant tree line are flat planes with procedural textures.
+- **The curtain is a formula, not a cloth simulation.** The folds are fairly regular and the hem is a straight line.
+- **The shadowed wall is smoothed by the denoiser.** The image is 400 samples per pixel plus denoising, not brute-force converged. The fine plaster relief shows mainly in the sunlit areas.
+- **Light shafts and dust are very restrained.** The shafts are barely visible and there are only a few motes, so they are not mistaken for noise.
+- **No caustics.** Glossy reflection is roughened after a diffuse bounce to remove fireflies, so the floor does not throw a bright patch of reflected sun onto the wall, and the tea and the cup cast no caustic highlights.
+- **Some props are simple.** The persimmon sepals and dry leaves, the weave of the hat, the books and the chair's wood grain do not hold up in close-up. The grain on a few floor planks looks a little regular at 100%.
+- **The composition is sparse.** The empty wall at the upper right is deliberate, but the picture has little narrative content.
+- **Physical simplifications.** The sky is a hand-written gradient, not an atmospheric scattering model. Leaves and sheer fabric use thin diffuse transmission only. The lens has no chromatic aberration or flare.
